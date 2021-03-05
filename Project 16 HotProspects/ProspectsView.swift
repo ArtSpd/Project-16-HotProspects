@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CodeScanner
 
 struct ProspectsView: View {
     
@@ -15,6 +16,7 @@ struct ProspectsView: View {
     
     let filter: FilterTupe
     @EnvironmentObject var prospects: Prospects
+    @State private var isShowingScanner = false
     
     var title: String{
         switch filter {
@@ -51,14 +53,31 @@ struct ProspectsView: View {
             }
                 .navigationBarTitle(title)
                 .navigationBarItems(trailing: Button(action: {
-                    let prospect = Prospect()
-                    prospect.name = "Artem Volkov"
-                    prospect.emailAddress = "example@example.com"
-                    self.prospects.people.append(prospect)
+                    self.isShowingScanner = true
+                    
                 }, label: {
                     Image(systemName: "qrcode.viewfinder")
                     Text("Scan")
                 }))
+            .sheet(isPresented: $isShowingScanner){
+                CodeScannerView(codeTypes: [.qr],simulatedData: "Artem Volkov\nartemvolk@mail.ru", completion: self.handleScane)
+            }
+        }
+    }
+    func handleScane(result: Result<String, CodeScannerView.ScanError>){
+        self.isShowingScanner = false
+        switch result {
+        case .success(let code):
+            let details = code.components(separatedBy: "\n")
+            guard details.count == 2 else { return }
+            
+            let person = Prospect()
+            person.name = details[0]
+            person.emailAddress = details[1]
+            self.prospects.people.append(person)
+            
+        case .failure(let error):
+            print("Scanning failde")
         }
     }
 }
